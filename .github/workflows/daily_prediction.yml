@@ -1,0 +1,38 @@
+name: Daily Football Prediction (9:30 AM & PM)
+
+on:
+  schedule:
+    - cron: '30 1 * * *'  # 北京时间早上 9:30
+    - cron: '30 13 * * *' # 北京时间晚上 21:30
+  workflow_dispatch:      # 允许手动触发
+
+permissions:
+  contents: write
+
+jobs:
+  predict-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: pip install requests
+
+      - name: Run AI Prediction (GPT-5.4)
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python src/ai_engine/run_gpt_prediction.py
+
+      - name: Commit and Push Results
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add site/data/
+          git diff --quiet && git diff --staged --quiet || git commit -m "Auto-update daily predictions"
+          git push
